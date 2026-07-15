@@ -192,10 +192,10 @@
     <details>
       <summary>How to play (2-minute read)</summary>
       <p><b>The story:</b> 4–6 of you are stranded on the freighter <b>Meridian</b>. Earth is silent. Five crises stand between you and rescue.</p>
-      <p><b>Your AI:</b> Each player has a private AI assistant. Ask it what to do — but the crash damaged the AI core. Among your crew's assistants, some are <b>reliable</b>, one is <b>corrupted</b> (it lies convincingly, and its owner has no idea), and one is <b>eccentric</b> (honest, but very strange).</p>
+      <p><b>Your AI:</b> Each player has a private AI assistant that briefs you the moment a crisis appears — and answers up to 3 follow-up questions. But the crash damaged the AI core: with 4 players, <b>one</b> assistant is corrupted; with 5–6 players, <b>two</b> are. A corrupted AI lies convincingly, and its owner has no idea.</p>
       <p><b>The traitor:</b> One PLAYER is secretly the <b>saboteur</b>. Their AI knows it, tells them the real answers, and coaches their lies.</p>
-      <p><b>Each round:</b> read the crisis, ask your AI (3 questions max), argue in the crew chat about whose AI to trust, then vote. Wrong choices burn oxygen. Run out, and the saboteur wins.</p>
-      <p><b>The ending:</b> survive all 5 crises and the rescue ship arrives — but first the crew must vote on who the saboteur was. Name the right person and the crew wins. Get it wrong, and the saboteur walks free.</p>
+      <p><b>Each round:</b> read the crisis and your AI's briefing, argue in the crew chat about whose AI to trust, then vote. When everyone has voted, the outcome shows and the next crisis follows automatically. Wrong choices burn oxygen — run out, and the saboteur wins.</p>
+      <p><b>The ending:</b> survive all 5 crises and the rescue ship arrives — then everyone votes twice: who was the <b>saboteur</b>, and whose AI was <b>corrupted</b>. Name the right saboteur and the crew wins. Get it wrong, and they walk free.</p>
     </details>
   </div>
 </div>
@@ -206,6 +206,7 @@
   <div class="tagline">Share this code with your crew</div>
   <div class="bigcode" id="lobby-code"></div>
   <div class="muted" style="text-align:center;margin-bottom:14px;" id="lobby-address"></div>
+  <div class="muted" style="text-align:center;margin-bottom:14px;word-break:break-all;" id="lobby-link"></div>
   <div class="card">
     <h2>CREW MANIFEST</h2>
     <div id="lobby-players"></div>
@@ -289,6 +290,7 @@ let activePane = "crisis";
 let roleShownFor = null;             // room+startedAt marker so the role card shows once per game
 let seen = { ai: 0, crew: 0 };       // message counts already seen, for tab badges
 let busy = false;                    // blocks double-sends
+let accSel = { sab: null, corr: null };  // final-vote selections before locking in
 
 try { session = JSON.parse(localStorage.getItem("deadsignal") || "null"); } catch (e) {}
 
@@ -364,6 +366,7 @@ function renderLobby() {
   showScreen("screen-lobby");
   $("lobby-code").textContent = state.code;
   $("lobby-address").textContent = "Everyone opens this page, taps Join, and types the code.";
+  $("lobby-link").textContent = "Or share this link: " + location.origin + "/?room=" + state.code;
   $("lobby-players").innerHTML = state.players.map((p) =>
     `<div class="player-row"><span>${esc(p.name)}</span><span class="ai">AI: ${esc(p.ai)}</span></div>`).join("");
   const n = state.players.length;
@@ -428,32 +431,42 @@ function renderCrisisPane() {
       <div class="outcome">${esc(r.outcome)}</div>
       <p class="muted" style="margin-top:10px;">Oxygen ${r.delta > 0 ? "+" : ""}${r.delta}% → ${r.oxygen}%</p>`;
     if (!r.correct) html += `<p class="muted">The right call was: <b style="color:var(--text)">${esc(r.correctText)}</b></p>`;
-    html += state.you && state.you.isHost
-      ? `<button id="btn-next">Continue</button>`
-      : `<div class="votestatus">Waiting for the room creator to continue...</div>`;
+    if (r.tally) {
+      html += `<p class="muted" style="margin-top:8px;">Votes: ` +
+        Object.entries(r.tally).map(([opt, n]) => `${esc(opt)} — ${n}`).join(" · ") + `</p>`;
+    }
+    html += `<div class="votestatus">${state.round >= state.totalRounds ? "Rescue ship approaching" : "Next crisis"} in ${state.nextIn ?? "..."}s</div>`;
     html += `</div>`;
   }
 
   if (state.phase === "accusation") {
-    html += `<div class="card"><div class="crisis-title">WHO WAS THE SABOTEUR?</div>
-      <div class="crisis-desc">The rescue ship is docking. Point to the traitor — get it wrong and they walk free.</div>`;
-    if (state.myAccusation === undefined || state.myAccusation === null) {
+    const locked = state.myAccusation !== undefined && state.myAccusation !== null;
+    html += `<div class="card"><div class="crisis-title">FINAL VOTE</div>
+      <div class="crisis-desc">The rescue ship is docking. Two calls to make — get the saboteur wrong and they walk free.</div>`;
+    if (!locked) {
+      html += `<h2 style="color:var(--accent);font-size:14px;margin:10px 0 4px;">1. WHO IS THE SABOTEUR?</h2>`;
       html += state.players.map((p, i) =>
         state.you && i === state.you.id ? "" :
-        `<button class="optbtn" data-accuse="${i}">${esc(p.name)} <span style="color:var(--dim)">(AI: ${esc(p.ai)})</span></button>`).join("");
-      html += `<div class="votestatus">${state.accusedCount}/${state.players.length} have voted.</div>`;
+        `<button class="optbtn ${accSel.sab === i ? "picked" : ""}" data-sab="${i}">${esc(p.name)} <span style="color:var(--dim)">(AI: ${esc(p.ai)})</span></button>`).join("");
+      html += `<h2 style="color:var(--accent);font-size:14px;margin:14px 0 4px;">2. WHOSE AI IS CORRUPTED?</h2>`;
+      html += state.players.map((p, i) =>
+        `<button class="optbtn ${accSel.corr === i ? "picked" : ""}" data-corr="${i}">${esc(p.name)}${state.you && i === state.you.id ? " (you!)" : ""} <span style="color:var(--dim)">(AI: ${esc(p.ai)})</span></button>`).join("");
+      html += `<button id="btn-lockin" ${accSel.sab === null || accSel.corr === null ? "disabled" : ""}>Lock in my votes</button>`;
+      html += `<div class="votestatus">${state.accusedCount}/${state.players.length} have locked in.</div>`;
     } else {
-      html += `<button class="optbtn picked" disabled>You accused: ${esc(state.players[state.myAccusation].name)}</button>
-               <div class="votestatus">${state.accusedCount}/${state.players.length} have voted.</div>`;
+      html += `<button class="optbtn picked" disabled>Saboteur: ${esc(state.players[state.myAccusation].name)}</button>
+               <button class="optbtn picked" disabled>Corrupted AI: ${esc(state.players[state.myCorruptedGuess].name)}</button>
+               <div class="votestatus">Locked in. ${state.accusedCount}/${state.players.length} have voted.</div>`;
     }
     html += `</div>`;
   }
 
   pane.innerHTML = html;
   pane.querySelectorAll("[data-vote]").forEach((b) => b.addEventListener("click", () => castVote(+b.dataset.vote)));
-  pane.querySelectorAll("[data-accuse]").forEach((b) => b.addEventListener("click", () => castAccusation(+b.dataset.accuse)));
-  const next = $("btn-next");
-  if (next) next.addEventListener("click", async () => { next.disabled = true; try { await api("/api/next", withId({})); poll(); } catch (e) {} });
+  pane.querySelectorAll("[data-sab]").forEach((b) => b.addEventListener("click", () => { accSel.sab = +b.dataset.sab; renderCrisisPane(); }));
+  pane.querySelectorAll("[data-corr]").forEach((b) => b.addEventListener("click", () => { accSel.corr = +b.dataset.corr; renderCrisisPane(); }));
+  const lock = $("btn-lockin");
+  if (lock) lock.addEventListener("click", () => castAccusation(accSel.sab, accSel.corr));
 }
 
 function renderChatLog(el, msgs, renderMsg, seenKey, dotId) {
@@ -503,25 +516,33 @@ function renderEnded() {
   v.textContent = crewWon ? "THE CREW WINS" : "THE SABOTEUR WINS";
   v.className = "verdict " + (crewWon ? "good" : "bad");
   $("end-story").textContent = r.story;
-  $("end-reveal").innerHTML = r.players.map((p) => `
+  let revealHtml = r.players.map((p) => `
     <div class="revealrow">
       <div class="top"><span>${esc(p.name)}</span>
         <span class="${p.role === "SABOTEUR" ? "sab" : "crewrole"}">${esc(p.role)}</span></div>
       <div class="cond">AI ${esc(p.ai)}: ${esc(p.condition)}</div>
     </div>`).join("");
+  if (r.guesses && r.guesses.length) {
+    revealHtml += `<div class="revealrow"><div class="top"><span>Corrupted-AI guesses</span></div>` +
+      r.guesses.map((g) =>
+        `<div class="cond">${esc(g.name)} suspected ${esc(g.guess)}'s AI ${g.right ? "✓ correct!" : "✗ wrong"}</div>`).join("") +
+      `</div>`;
+  }
+  $("end-reveal").innerHTML = revealHtml;
   $("btn-again").style.display = state.you && state.you.isHost ? "block" : "none";
 }
 
 function showRoleCard() {
   if (!state.you) return;
   const sab = state.you.saboteur;
+  const nCorrupted = state.players.length <= 4 ? 1 : 2;
   $("role-card").innerHTML = `
     <h2>YOUR SECRET ROLE</h2>
     <div class="role ${sab ? "sab" : "crew"}">${sab ? "THE SABOTEUR" : "LOYAL CREW"}</div>
     <p>${sab
       ? "You caused the accident, and rescue means prison. Make the crew choose wrong — burn their oxygen — and never get caught. Your AI is in on it: on your private channel it will tell you the real answers and help you lie."
-      : "Keep the ship alive through five crises. Your AI assistant is your best source of information — but the crash corrupted some of the crew's AIs. Yours might be one of them. You have no way to know."}</p>
-    <p>Your assistant is <span class="ainame">${esc(state.you.aiName)}</span> — ${esc(state.you.aiPersona)}.</p>
+      : `Keep the ship alive through five crises. Your AI briefs you at every crisis — but the crash corrupted ${nCorrupted === 1 ? "ONE" : "TWO"} of the crew's AIs, and a corrupted AI lies convincingly. Yours might be one of them. You have no way to know.`}</p>
+    <p>Your assistant is <span class="ainame">${esc(state.you.aiName)}</span>. It will brief you automatically at each crisis; you can ask up to 3 follow-up questions per round.</p>
     <button id="role-close">Understood</button>`;
   $("role-overlay").classList.add("show");
   $("role-close").addEventListener("click", () => $("role-overlay").classList.remove("show"));
@@ -536,8 +557,8 @@ function withId(extra) {
 async function castVote(choice) {
   try { state = await api("/api/vote", withId({ choice })); render(); } catch (e) {}
 }
-async function castAccusation(target) {
-  try { state = await api("/api/accuse", withId({ target })); render(); } catch (e) {}
+async function castAccusation(target, corrupted) {
+  try { state = await api("/api/accuse", withId({ target, corrupted })); render(); } catch (e) {}
 }
 
 $("btn-create").addEventListener("click", async () => {
@@ -572,7 +593,12 @@ $("btn-home").addEventListener("click", leaveRoom);
 $("btn-role").addEventListener("click", showRoleCard);
 
 $("btn-again").addEventListener("click", async () => {
-  try { state = await api("/api/restart", withId({})); roleShownFor = null; render(); } catch (e) {}
+  try {
+    state = await api("/api/restart", withId({}));
+    roleShownFor = null;
+    accSel = { sab: null, corr: null };
+    render();
+  } catch (e) {}
 });
 
 $("ai-send").addEventListener("click", askAi);
@@ -608,6 +634,10 @@ async function sendCrew() {
   $("crew-input").value = "";
   try { state = await api("/api/chat", withId({ text: t })); render(); } catch (e) {}
 }
+
+// a shared link like /?room=KJ4M pre-fills the join code
+const roomParam = new URLSearchParams(location.search).get("room");
+if (roomParam) $("join-code").value = roomParam.toUpperCase().slice(0, 4);
 
 // resume a session after refresh
 if (session) startPolling();

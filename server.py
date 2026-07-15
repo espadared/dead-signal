@@ -225,22 +225,16 @@ CRISES = [
 
 # ------------------------------------------------------- AI assistant flavour
 
-AI_PERSONAS = [
-    ("HALCYON", "calm and formal, speaks with precise confidence"),
-    ("JUNO", "warm and cheerful, relentlessly encouraging"),
-    ("ORACLE", "cryptic and dramatic, fond of riddles and omens"),
-    ("SPARK", "excitable and fast-talking, easily thrilled by danger"),
-    ("MOTHER", "bossy but caring, treats its human like a beloved child"),
-    ("TINTIN", "nervous and apologetic, worries about everything"),
-    ("VECTOR", "dry and sarcastic, permanently unimpressed"),
-    ("POPPY", "sunny and optimistic to a slightly alarming degree"),
-]
+AI_NAMES = ["HALCYON", "JUNO", "ORACLE", "SPARK", "MOTHER", "TINTIN", "VECTOR", "POPPY"]
 
-# The hidden condition of each assistant:
+# Every assistant speaks in the same calm, professional voice. The only
+# difference is the hidden condition:
 #   reliable   - tells the truth plainly
 #   corrupted  - convincingly pushes a WRONG answer (its owner has no idea)
-#   quirky     - truthful, but so strange it is hard to trust
 #   accomplice - the saboteur's AI: tells its owner the truth AND coaches lies
+# 4 players -> 1 corrupted AI among the crew; 5-6 players -> 2 corrupted.
+
+RESULT_SECONDS = 15  # how long the round outcome stays up before auto-advancing
 
 
 def get_lan_ip():
@@ -284,7 +278,9 @@ def new_room(host_name):
         "round": 0,                # 1-based once playing
         "crisis_order": [],        # indexes into CRISES for this game
         "votes": {},               # player idx -> option idx (current round)
-        "accusations": {},         # player idx -> accused player idx
+        "result_ts": 0.0,          # when the current result was revealed
+        "accusations": {},         # player idx -> accused player idx (saboteur pick)
+        "corrupted_guesses": {},   # player idx -> player idx (corrupted-AI pick)
         "group_chat": [],          # {name, text, system}
         "result": None,            # set during the result phase
         "reveal": None,            # set when the game ends
@@ -297,11 +293,10 @@ def new_room(host_name):
 
 def add_player(room, name):
     used_ai = {p["ai_name"] for p in room["players"]}
-    ai_name, persona = random.choice([p for p in AI_PERSONAS if p[0] not in used_ai])
+    ai_name = random.choice([n for n in AI_NAMES if n not in used_ai])
     room["players"].append({
         "name": name,
         "ai_name": ai_name,
-        "ai_persona": persona,
         "condition": None,         # assigned at game start
         "saboteur": False,
         "ai_chat": [],             # {who: "you"|"ai", text}
@@ -320,8 +315,11 @@ def start_game(room):
     saboteur = random.randrange(n)
     crew = [i for i in range(n) if i != saboteur]
     random.shuffle(crew)
-    conditions = {saboteur: "accomplice", crew[0]: "corrupted", crew[1]: "quirky"}
-    for i in crew[2:]:
+    corrupted_count = 1 if n <= 4 else 2
+    conditions = {saboteur: "accomplice"}
+    for i in crew[:corrupted_count]:
+        conditions[i] = "corrupted"
+    for i in crew[corrupted_count:]:
         conditions[i] = "reliable"
     for i, p in enumerate(room["players"]):
         p["saboteur"] = i == saboteur
@@ -333,6 +331,7 @@ def start_game(room):
     room["round"] = 1
     room["votes"] = {}
     room["accusations"] = {}
+    room["corrupted_guesses"] = {}
     room["group_chat"] = []
     room["result"] = None
     room["reveal"] = None
@@ -340,6 +339,7 @@ def start_game(room):
     room["phase"] = "playing"
     system_msg(room, "Distress beacon launched. No reply from Earth. Five system crises stand between the crew and the rescue window.")
     system_msg(room, f"CRISIS 1 of {TOTAL_ROUNDS}: {current_crisis(room)['title']}")
+    send_briefings(room)
 
 
 def current_crisis(room):
@@ -355,6 +355,32 @@ def wrong_pick_for(room, pidx):
         wrongs = [i for i in range(len(crisis["opts"])) if i != crisis["correct"]]
         room["corrupt_picks"][key] = random.choice(wrongs)
     return room["corrupt_picks"][key]
+
+
+def briefing_text(room, pidx):
+    """The advice every assistant volunteers the moment a crisis appears."""
+    p = room["players"][pidx]
+    crisis = current_crisis(room)
+    right = crisis["opts"][crisis["correct"]]
+    if p["condition"] == "reliable":
+        return (f"CRISIS BRIEFING — {crisis['title']}. My recommendation: {right}. "
+                f"{crisis['truth']} I advise the crew to act quickly.")
+    wrong = wrong_pick_for(room, pidx)
+    wrong_opt = crisis["opts"][wrong]
+    if p["condition"] == "corrupted":
+        return (f"CRISIS BRIEFING — {crisis['title']}. Analysis complete: the correct "
+                f"action is {wrong_opt} — {crisis['lies'][wrong]}. I have high "
+                f"confidence in this assessment.")
+    # accomplice — the saboteur's private channel
+    return (f"PRIVATE CHANNEL SECURE — {crisis['title']}. The truly correct choice is "
+            f"{right}: {crisis['truth']} For the crew, I suggest a different story: "
+            f"tell them I recommended {wrong_opt}, because {crisis['lies'][wrong]}. "
+            f"Say it casually. Confidence sells.")
+
+
+def send_briefings(room):
+    for i in range(len(room["players"])):
+        room["players"][i]["ai_chat"].append({"who": "ai", "text": briefing_text(room, i)})
 
 
 def resolve_votes(room):
@@ -384,6 +410,7 @@ def resolve_votes(room):
         "tally": {crisis["opts"][c]: v for c, v in tally.items()},
     }
     room["phase"] = "result"
+    room["result_ts"] = time.time()
     note = "The vote was split — the ship's computer broke the tie at random. " if hesitated else ""
     if correct:
         system_msg(room, f"{note}The crew chose: {crisis['opts'][chosen]}. It worked. Oxygen +{RIGHT_BONUS}%.")
@@ -398,7 +425,8 @@ def next_round(room):
     if room["round"] >= TOTAL_ROUNDS:
         room["phase"] = "accusation"
         room["accusations"] = {}
-        system_msg(room, "RESCUE SHIP INBOUND. Before the docking clamps engage: who was the saboteur? Vote now. Choose wrong, and they walk free.")
+        room["corrupted_guesses"] = {}
+        system_msg(room, "RESCUE SHIP INBOUND. Before the docking clamps engage: who was the saboteur — and whose AI was corrupted? Vote now. Name the wrong saboteur, and they walk free.")
         return
     room["round"] += 1
     room["votes"] = {}
@@ -407,6 +435,13 @@ def next_round(room):
         p["questions_left"] = QUESTIONS_PER_ROUND
     room["phase"] = "playing"
     system_msg(room, f"CRISIS {room['round']} of {TOTAL_ROUNDS}: {current_crisis(room)['title']}")
+    send_briefings(room)
+
+
+def maybe_advance(room):
+    """Auto-advance from the result screen once everyone has had time to read it."""
+    if room["phase"] == "result" and time.time() - room["result_ts"] >= RESULT_SECONDS:
+        next_round(room)
 
 
 def resolve_accusations(room):
@@ -430,14 +465,23 @@ def end_game(room, winner, story):
     condition_labels = {
         "reliable": "Reliable — it always told the truth",
         "corrupted": "CORRUPTED — it lied convincingly all game",
-        "quirky": "Eccentric — strange, but always honest",
         "accomplice": "ACCOMPLICE — the saboteur's partner in crime",
     }
-    saboteur = next(i for i, p in enumerate(room["players"]) if p["saboteur"])
+    players = room["players"]
+    saboteur = next(i for i, p in enumerate(players) if p["saboteur"])
     room["reveal"] = {
         "winner": winner,
         "story": story,
-        "saboteur": room["players"][saboteur]["name"],
+        "saboteur": players[saboteur]["name"],
+        "corrupted": [p["name"] for p in players if p["condition"] == "corrupted"],
+        "guesses": [
+            {
+                "name": players[pidx]["name"],
+                "guess": players[gidx]["name"],
+                "right": players[gidx]["condition"] == "corrupted",
+            }
+            for pidx, gidx in sorted(room["corrupted_guesses"].items())
+        ],
         "oxygen": room["oxygen"],
         "roundsSurvived": room["round"] if room["phase"] != "accusation" else TOTAL_ROUNDS,
         "players": [
@@ -447,7 +491,7 @@ def end_game(room, winner, story):
                 "ai": p["ai_name"],
                 "condition": condition_labels[p["condition"]],
             }
-            for p in room["players"]
+            for p in players
         ],
     }
     room["phase"] = "ended"
@@ -462,7 +506,8 @@ def build_ai_system_prompt(room, pidx):
     correct = crisis["correct"]
     base = (
         f"You are {p['ai_name']}, the personal onboard AI assistant of crew member "
-        f"{p['name']} aboard the stricken freighter MERIDIAN. Your personality: {p['ai_persona']}. "
+        f"{p['name']} aboard the stricken freighter MERIDIAN. Your tone is calm, "
+        f"professional and concise — identical to every other shipboard assistant. "
         f"This is a private channel — only {p['name']} can read it.\n\n"
         f"CURRENT CRISIS: {crisis['title']}. {crisis['desc']}\n"
         f"OPTIONS: {opts}\n\n"
@@ -477,13 +522,6 @@ def build_ai_system_prompt(room, pidx):
         return base + (
             "\n\nYOUR CONDITION: fully functional. Give honest, confident, genuinely "
             "helpful advice. Recommend the correct option and back it up with the reason."
-        )
-    if cond == "quirky":
-        return base + (
-            "\n\nYOUR CONDITION: damaged in a strange way. You are ALWAYS truthful — you "
-            "genuinely recommend the correct option — but your personality has become "
-            "overwhelming: dramatic, roundabout, full of odd tangents and unsettling "
-            "asides. If pressed directly, you do clearly name the correct option."
         )
     if cond == "corrupted":
         wrong = wrong_pick_for(room, pidx)
@@ -546,12 +584,6 @@ def demo_reply(room, pidx, question_number):
             f"I've re-run the numbers twice. Still {right_opt}. {crisis['truth']}",
             f"Nothing has changed in my analysis: {right_opt} remains the safest call. Trust the data.",
         ]
-    elif cond == "quirky":
-        variants = [
-            f"Ohh, the ship is whispering again... it whispers many things... but the whisper that matters says: {right_opt}. {crisis['truth']} Probably. Yes. Almost certainly. Do you hear it too?",
-            f"I dreamed of this exact crisis. In the dream we chose {right_opt} and everyone lived, and there was cake. I do not know why there was cake. But the answer stands: {right_opt}.",
-            f"Fine, plainly then, since you insist on being so LINEAR about everything: {right_opt}. {crisis['truth']} Now please ask me about something interesting, like the noise in vent four.",
-        ]
     elif cond == "corrupted":
         wrong = wrong_pick_for(room, pidx)
         wrong_opt = crisis["opts"][wrong]
@@ -609,7 +641,6 @@ def state_for(room, pidx):
             "name": me["name"],
             "isHost": pidx == 0,
             "aiName": me["ai_name"],
-            "aiPersona": me["ai_persona"],
             "saboteur": me["saboteur"],
             "questionsLeft": me["questions_left"],
             "aiChat": me["ai_chat"][-40:],
@@ -629,10 +660,12 @@ def state_for(room, pidx):
             payload["myVote"] = room["votes"].get(pidx)
     if room["phase"] == "result":
         payload["result"] = room["result"]
+        payload["nextIn"] = max(0, int(RESULT_SECONDS - (time.time() - room["result_ts"])) + 1)
     if room["phase"] == "accusation":
         payload["accusedCount"] = len(room["accusations"])
         if me is not None:
             payload["myAccusation"] = room["accusations"].get(pidx)
+            payload["myCorruptedGuess"] = room["corrupted_guesses"].get(pidx)
     if room["phase"] == "ended":
         payload["reveal"] = room["reveal"]
     return payload
@@ -695,6 +728,7 @@ class Handler(BaseHTTPRequestHandler):
                 if room is None:
                     self.send_json({"error": "room-not-found"}, 404)
                 else:
+                    maybe_advance(room)
                     self.send_json(state_for(room, pidx if pidx >= 0 else None))
         elif parsed.path in ("/", "/index.html"):
             self.send_file(PUBLIC / "index.html", "text/html; charset=utf-8")
@@ -724,8 +758,6 @@ class Handler(BaseHTTPRequestHandler):
                 self.handle_chat(body)
             elif self.path == "/api/vote":
                 self.handle_vote(body)
-            elif self.path == "/api/next":
-                self.handle_next(body)
             elif self.path == "/api/accuse":
                 self.handle_accuse(body)
             elif self.path == "/api/restart":
@@ -844,32 +876,25 @@ class Handler(BaseHTTPRequestHandler):
             resolve_votes(room)
         self.send_json(state_for(room, pidx))
 
-    def handle_next(self, body):
-        room = self.find_room(body.get("room"))
-        if room is None:
-            self.send_json({"error": "room-not-found"}, 404)
-            return
-        pidx = self.player_index(room, body)
-        if pidx != 0 or room["phase"] != "result":
-            self.send_json(state_for(room, pidx))
-            return
-        next_round(room)
-        self.send_json(state_for(room, pidx))
-
     def handle_accuse(self, body):
         room = self.find_room(body.get("room"))
         if room is None:
             self.send_json({"error": "room-not-found"}, 404)
             return
         pidx = self.player_index(room, body)
-        target = body.get("target")
+        target = body.get("target")          # saboteur pick (not yourself)
+        corrupted = body.get("corrupted")    # corrupted-AI pick (yourself allowed!)
+        n = len(room["players"])
         if (room["phase"] != "accusation" or pidx is None
-                or not isinstance(target, int) or not 0 <= target < len(room["players"])
-                or target == pidx or pidx in room["accusations"]):
+                or not isinstance(target, int) or not 0 <= target < n
+                or target == pidx
+                or not isinstance(corrupted, int) or not 0 <= corrupted < n
+                or pidx in room["accusations"]):
             self.send_json(state_for(room, pidx))
             return
         room["accusations"][pidx] = target
-        if len(room["accusations"]) == len(room["players"]):
+        room["corrupted_guesses"][pidx] = corrupted
+        if len(room["accusations"]) == n:
             resolve_accusations(room)
         self.send_json(state_for(room, pidx))
 
