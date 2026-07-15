@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Dead Signal</title>
+<style>
+  :root {
+    --bg: #070b14;
+    --panel: #0e1524;
+    --panel2: #131c30;
+    --line: #22304e;
+    --text: #dbe6ff;
+    --dim: #7d8db0;
+    --accent: #4fd1ff;
+    --good: #3ddc84;
+    --bad: #ff5d6c;
+    --warn: #ffc857;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: radial-gradient(1200px 600px at 50% -10%, #101c3a 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .screen { display: none; max-width: 520px; margin: 0 auto; padding: 16px; min-height: 100dvh; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  h1.logo {
+    font-size: 40px; letter-spacing: 6px; text-align: center; margin: 40px 0 4px;
+    color: var(--accent); text-shadow: 0 0 24px rgba(79, 209, 255, .45);
+    font-weight: 800;
+  }
+  .tagline { text-align: center; color: var(--dim); margin-bottom: 28px; font-size: 14px; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px; margin-bottom: 14px;
+  }
+  .card h2 { font-size: 15px; margin-bottom: 10px; color: var(--accent); letter-spacing: 1px; }
+  label { display: block; font-size: 12px; color: var(--dim); margin: 8px 0 4px; }
+  input[type=text] {
+    width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--panel2); color: var(--text); font-size: 16px; outline: none;
+  }
+  input[type=text]:focus { border-color: var(--accent); }
+  button {
+    width: 100%; padding: 13px; margin-top: 12px; border: none; border-radius: 10px;
+    background: var(--accent); color: #05233a; font-size: 16px; font-weight: 700;
+    cursor: pointer;
+  }
+  button:disabled { opacity: .35; cursor: default; }
+  button.ghost { background: transparent; border: 1px solid var(--line); color: var(--text); font-weight: 500; }
+  button.danger { background: var(--bad); color: #fff; }
+  .error { color: var(--bad); font-size: 13px; margin-top: 10px; min-height: 16px; text-align: center; }
+  .muted { color: var(--dim); font-size: 13px; line-height: 1.5; }
+  details { margin-top: 4px; }
+  summary { cursor: pointer; color: var(--accent); font-size: 14px; padding: 6px 0; }
+  details p { margin: 6px 0; font-size: 13px; color: var(--dim); line-height: 1.55; }
+  details b { color: var(--text); }
+
+  /* lobby */
+  .bigcode {
+    font-size: 44px; letter-spacing: 12px; text-align: center; font-weight: 800;
+    color: var(--warn); margin: 6px 0 2px;
+  }
+  .player-row {
+    display: flex; justify-content: space-between; padding: 10px 4px;
+    border-bottom: 1px solid var(--line); font-size: 15px;
+  }
+  .player-row:last-child { border-bottom: none; }
+  .player-row .ai { color: var(--dim); font-size: 13px; }
+
+  /* game header */
+  .hud { display: flex; align-items: center; gap: 10px; padding: 4px 2px 10px; }
+  .hud .title { font-weight: 800; letter-spacing: 2px; color: var(--accent); font-size: 14px; }
+  .hud .round { color: var(--dim); font-size: 13px; margin-left: auto; white-space: nowrap; }
+  .hud .rolebtn {
+    width: auto; margin: 0; padding: 6px 10px; font-size: 12px;
+    background: var(--panel2); color: var(--text); border: 1px solid var(--line); font-weight: 600;
+  }
+  .o2wrap { margin-bottom: 10px; }
+  .o2label { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); margin-bottom: 4px; }
+  .o2bar { height: 12px; border-radius: 6px; background: var(--panel2); border: 1px solid var(--line); overflow: hidden; }
+  .o2fill { height: 100%; background: linear-gradient(90deg, var(--good), #9be15d); transition: width .6s; }
+  .o2fill.low { background: linear-gradient(90deg, var(--bad), var(--warn)); }
+
+  /* tabs */
+  .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .tab {
+    flex: 1; text-align: center; padding: 10px 4px; border-radius: 10px; font-size: 13px;
+    font-weight: 700; background: var(--panel); border: 1px solid var(--line);
+    color: var(--dim); cursor: pointer; position: relative;
+  }
+  .tab.active { color: var(--accent); border-color: var(--accent); }
+  .tab .dot {
+    position: absolute; top: 6px; right: 8px; width: 8px; height: 8px;
+    border-radius: 50%; background: var(--warn); display: none;
+  }
+  .tab .dot.show { display: block; }
+
+  .pane { display: none; flex: 1; flex-direction: column; min-height: 0; }
+  .pane.active { display: flex; }
+
+  .crisis-title { font-size: 18px; font-weight: 800; color: var(--warn); margin-bottom: 6px; }
+  .crisis-desc { font-size: 14px; line-height: 1.55; color: var(--text); margin-bottom: 12px; }
+  .optbtn {
+    background: var(--panel2); color: var(--text); border: 1px solid var(--line);
+    text-align: left; font-weight: 600; font-size: 14px; line-height: 1.4;
+  }
+  .optbtn.picked { border-color: var(--accent); color: var(--accent); }
+  .votestatus { text-align: center; color: var(--dim); font-size: 13px; margin-top: 12px; }
+
+  /* chat */
+  .chatlog {
+    flex: 1; overflow-y: auto; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px;
+    min-height: 200px;
+  }
+  .msg { max-width: 85%; padding: 9px 12px; border-radius: 12px; font-size: 14px; line-height: 1.45; }
+  .msg .who { font-size: 11px; color: var(--dim); margin-bottom: 2px; font-weight: 700; letter-spacing: .5px; }
+  .msg.you { align-self: flex-end; background: #14406b; }
+  .msg.them { align-self: flex-start; background: var(--panel2); }
+  .msg.ai { align-self: flex-start; background: #1b2b1f; border: 1px solid #2d4a34; }
+  .msg.sys {
+    align-self: center; background: transparent; color: var(--warn); font-size: 12px;
+    text-align: center; border: 1px dashed var(--line); max-width: 100%;
+  }
+  .chatinput { display: flex; gap: 8px; margin-top: 10px; }
+  .chatinput input { flex: 1; }
+  .chatinput button { width: auto; margin: 0; padding: 0 18px; }
+  .qleft { text-align: center; font-size: 12px; color: var(--dim); margin-top: 6px; }
+
+  /* result + end */
+  .verdict { font-size: 22px; font-weight: 800; text-align: center; margin: 10px 0; }
+  .verdict.good { color: var(--good); }
+  .verdict.bad { color: var(--bad); }
+  .outcome { font-size: 14px; line-height: 1.6; }
+  .revealrow { display: flex; flex-direction: column; padding: 10px 4px; border-bottom: 1px solid var(--line); }
+  .revealrow:last-child { border-bottom: none; }
+  .revealrow .top { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; }
+  .revealrow .sab { color: var(--bad); }
+  .revealrow .crewrole { color: var(--good); }
+  .revealrow .cond { font-size: 13px; color: var(--dim); margin-top: 2px; }
+
+  /* role modal */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(3, 6, 12, .88); display: none;
+    align-items: center; justify-content: center; padding: 20px; z-index: 50;
+  }
+  .overlay.show { display: flex; }
+  .rolecard { max-width: 420px; width: 100%; text-align: center; }
+  .rolecard .role { font-size: 26px; font-weight: 800; margin: 8px 0; }
+  .rolecard .role.crew { color: var(--good); }
+  .rolecard .role.sab { color: var(--bad); }
+  .rolecard p { font-size: 14px; color: var(--dim); line-height: 1.6; margin: 10px 0; }
+  .rolecard .ainame { color: var(--accent); font-weight: 800; }
+  .demobadge {
+    text-align: center; font-size: 11px; color: var(--warn); margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================== HOME ============================== -->
+<div class="screen active" id="screen-home">
+  <h1 class="logo">DEAD SIGNAL</h1>
+  <div class="tagline">Your AI assistant is your only hope.<br>It might also be lying to you.</div>
+
+  <div class="card">
+    <h2>CREATE A SHIP</h2>
+    <label>Your name</label>
+    <input type="text" id="create-name" maxlength="20" placeholder="e.g. Paul">
+    <button id="btn-create">Create room</button>
+  </div>
+
+  <div class="card">
+    <h2>JOIN A CREW</h2>
+    <label>Room code</label>
+    <input type="text" id="join-code" maxlength="4" placeholder="e.g. KJ4M" style="text-transform:uppercase">
+    <label>Your name</label>
+    <input type="text" id="join-name" maxlength="20" placeholder="Your name">
+    <button id="btn-join">Join room</button>
+  </div>
+
+  <div class="error" id="home-error"></div>
+
+  <div class="card">
+    <details>
+      <summary>How to play (2-minute read)</summary>
+      <p><b>The story:</b> 4–6 of you are stranded on the freighter <b>Meridian</b>. Earth is silent. Five crises stand between you and rescue.</p>
+      <p><b>Your AI:</b> Each player has a private AI assistant. Ask it what to do — but the crash damaged the AI core. Among your crew's assistants, some are <b>reliable</b>, one is <b>corrupted</b> (it lies convincingly, and its owner has no idea), and one is <b>eccentric</b> (honest, but very strange).</p>
+      <p><b>The traitor:</b> One PLAYER is secretly the <b>saboteur</b>. Their AI knows it, tells them the real answers, and coaches their lies.</p>
+      <p><b>Each round:</b> read the crisis, ask your AI (3 questions max), argue in the crew chat about whose AI to trust, then vote. Wrong choices burn oxygen. Run out, and the saboteur wins.</p>
+      <p><b>The ending:</b> survive all 5 crises and the rescue ship arrives — but first the crew must vote on who the saboteur was. Name the right person and the crew wins. Get it wrong, and the saboteur walks free.</p>
+    </details>
+  </div>
+</div>
+
+<!-- ============================== LOBBY ============================== -->
+<div class="screen" id="screen-lobby">
+  <h1 class="logo" style="font-size:26px;margin-top:20px;">DEAD SIGNAL</h1>
+  <div class="tagline">Share this code with your crew</div>
+  <div class="bigcode" id="lobby-code"></div>
+  <div class="muted" style="text-align:center;margin-bottom:14px;" id="lobby-address"></div>
+  <div class="card">
+    <h2>CREW MANIFEST</h2>
+    <div id="lobby-players"></div>
+  </div>
+  <div class="muted" style="text-align:center;" id="lobby-hint"></div>
+  <button id="btn-start" style="display:none;">Launch the game</button>
+  <div class="error" id="lobby-error"></div>
+  <button class="ghost" id="btn-leave">Leave room</button>
+</div>
+
+<!-- ============================== GAME ============================== -->
+<div class="screen" id="screen-game">
+  <div class="demobadge" id="demo-badge" style="display:none;">DEMO MODE — SCRIPTED AI REPLIES</div>
+  <div class="hud">
+    <span class="title">DEAD SIGNAL</span>
+    <button class="rolebtn" id="btn-role">My role</button>
+    <span class="round" id="hud-round"></span>
+  </div>
+  <div class="o2wrap">
+    <div class="o2label"><span>SHIP OXYGEN</span><span id="o2-num"></span></div>
+    <div class="o2bar"><div class="o2fill" id="o2-fill"></div></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-pane="crisis">CRISIS<span class="dot" id="dot-crisis"></span></div>
+    <div class="tab" data-pane="ai">MY AI<span class="dot" id="dot-ai"></span></div>
+    <div class="tab" data-pane="crew">CREW CHAT<span class="dot" id="dot-crew"></span></div>
+  </div>
+
+  <!-- crisis / vote / result / accusation pane -->
+  <div class="pane active" id="pane-crisis" style="overflow-y:auto;"></div>
+
+  <!-- private AI pane -->
+  <div class="pane" id="pane-ai">
+    <div class="chatlog" id="ai-log"></div>
+    <div class="qleft" id="ai-qleft"></div>
+    <div class="chatinput">
+      <input type="text" id="ai-input" maxlength="300" placeholder="Ask your assistant...">
+      <button id="ai-send">Ask</button>
+    </div>
+  </div>
+
+  <!-- crew chat pane -->
+  <div class="pane" id="pane-crew">
+    <div class="chatlog" id="crew-log"></div>
+    <div class="chatinput">
+      <input type="text" id="crew-input" maxlength="300" placeholder="Message the crew...">
+      <button id="crew-send">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== ENDED ============================== -->
+<div class="screen" id="screen-ended">
+  <h1 class="logo" style="font-size:26px;margin-top:20px;">DEAD SIGNAL</h1>
+  <div class="verdict" id="end-verdict"></div>
+  <div class="card"><div class="outcome" id="end-story"></div></div>
+  <div class="card">
+    <h2>THE TRUTH</h2>
+    <div id="end-reveal"></div>
+  </div>
+  <button id="btn-again" style="display:none;">Play again (same crew)</button>
+  <button class="ghost" id="btn-home">Back to home</button>
+</div>
+
+<!-- role modal -->
+<div class="overlay" id="role-overlay">
+  <div class="card rolecard" id="role-card"></div>
+</div>
+
+<script>
+"use strict";
+
+const $ = (id) => document.getElementById(id);
+const POLL_MS = 2000;
+
+let session = null;   // {room, playerId, name}
+let state = null;     // last server state
+let pollTimer = null;
+let activePane = "crisis";
+let roleShownFor = null;             // room+startedAt marker so the role card shows once per game
+let seen = { ai: 0, crew: 0 };       // message counts already seen, for tab badges
+let busy = false;                    // blocks double-sends
+
+try { session = JSON.parse(localStorage.getItem("deadsignal") || "null"); } catch (e) {}
+
+function saveSession() {
+  if (session) localStorage.setItem("deadsignal", JSON.stringify(session));
+  else localStorage.removeItem("deadsignal");
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+async function api(path, body) {
+  const resp = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.error || "Something went wrong.");
+  return data;
+}
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+  $(id).classList.add("active");
+}
+
+function setPane(name) {
+  activePane = name;
+  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.pane === name));
+  document.querySelectorAll(".pane").forEach((p) => p.classList.toggle("active", p.id === "pane-" + name));
+  if (name === "ai" && state && state.you) { seen.ai = state.you.aiChat.length; $("dot-ai").classList.remove("show"); }
+  if (name === "crew" && state && state.groupChat) { seen.crew = state.groupChat.length; $("dot-crew").classList.remove("show"); }
+}
+document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => setPane(t.dataset.pane)));
+
+// ------------------------------------------------------------- polling
+
+async function poll() {
+  if (!session) return;
+  try {
+    const resp = await fetch(`/api/state?room=${encodeURIComponent(session.room)}&player=${session.playerId}`);
+    if (resp.status === 404) { leaveRoom(); return; }
+    state = await resp.json();
+    render();
+  } catch (e) { /* transient network issue - just try again next tick */ }
+}
+
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(poll, POLL_MS);
+  poll();
+}
+
+function leaveRoom() {
+  session = null; state = null; roleShownFor = null;
+  saveSession();
+  if (pollTimer) clearInterval(pollTimer);
+  showScreen("screen-home");
+}
+
+// ------------------------------------------------------------- rendering
+
+function render() {
+  if (!state || !session) return;
+  if (state.phase === "lobby") renderLobby();
+  else if (state.phase === "ended") renderEnded();
+  else renderGame();
+}
+
+function renderLobby() {
+  showScreen("screen-lobby");
+  $("lobby-code").textContent = state.code;
+  $("lobby-address").textContent = "Everyone opens this page, taps Join, and types the code.";
+  $("lobby-players").innerHTML = state.players.map((p) =>
+    `<div class="player-row"><span>${esc(p.name)}</span><span class="ai">AI: ${esc(p.ai)}</span></div>`).join("");
+  const n = state.players.length;
+  const isHost = state.you && state.you.isHost;
+  $("btn-start").style.display = isHost ? "block" : "none";
+  $("btn-start").disabled = n < state.minPlayers;
+  $("lobby-hint").textContent =
+    n < state.minPlayers
+      ? `Waiting for crew... ${n}/${state.minPlayers} minimum (up to ${state.maxPlayers}).`
+      : isHost ? `${n} aboard. Ready when you are, captain.` : "Waiting for the room creator to launch...";
+}
+
+function renderGame() {
+  showScreen("screen-game");
+  $("demo-badge").style.display = state.demo ? "block" : "none";
+  $("hud-round").textContent =
+    state.phase === "accusation" ? "FINAL VOTE" : `Crisis ${state.round}/${state.totalRounds}`;
+
+  const o2 = state.oxygen;
+  $("o2-num").textContent = o2 + "%";
+  const fill = $("o2-fill");
+  fill.style.width = o2 + "%";
+  fill.classList.toggle("low", o2 <= 35);
+
+  // one-time role card at the start of each game
+  const marker = state.code + ":" + (state.you ? state.you.aiName : "") + ":" + state.totalRounds;
+  if (state.round === 1 && state.phase === "playing" && roleShownFor !== marker) {
+    roleShownFor = marker;
+    showRoleCard();
+  }
+
+  renderCrisisPane();
+  renderAiPane();
+  renderCrewPane();
+}
+
+function renderCrisisPane() {
+  const pane = $("pane-crisis");
+  let html = "";
+
+  if (state.phase === "playing") {
+    const c = state.crisis;
+    html += `<div class="card"><div class="crisis-title">⚠ ${esc(c.title)}</div>
+             <div class="crisis-desc">${esc(c.desc)}</div>`;
+    if (state.myVote === undefined || state.myVote === null) {
+      html += c.opts.map((o, i) =>
+        `<button class="optbtn" data-vote="${i}">${i + 1}. ${esc(o)}</button>`).join("");
+      html += `<div class="votestatus">Ask your AI, talk to the crew — then vote. ${state.votedCount}/${state.players.length} have voted.</div>`;
+    } else {
+      html += `<button class="optbtn picked" disabled>Your vote: ${esc(c.opts[state.myVote])}</button>
+               <div class="votestatus">Vote locked. ${state.votedCount}/${state.players.length} have voted.</div>`;
+    }
+    html += `</div>`;
+  }
+
+  if (state.phase === "result") {
+    const r = state.result;
+    html += `<div class="card">
+      <div class="verdict ${r.correct ? "good" : "bad"}">${r.correct ? "IT WORKED" : "IT WENT WRONG"}</div>
+      <div class="crisis-title" style="font-size:15px;">${esc(r.title)}</div>
+      <p class="muted" style="margin:8px 0;">The crew chose: <b style="color:var(--text)">${esc(r.chosenText)}</b>${r.hesitated ? " (tie — the ship's computer decided)" : ""}</p>
+      <div class="outcome">${esc(r.outcome)}</div>
+      <p class="muted" style="margin-top:10px;">Oxygen ${r.delta > 0 ? "+" : ""}${r.delta}% → ${r.oxygen}%</p>`;
+    if (!r.correct) html += `<p class="muted">The right call was: <b style="color:var(--text)">${esc(r.correctText)}</b></p>`;
+    html += state.you && state.you.isHost
+      ? `<button id="btn-next">Continue</button>`
+      : `<div class="votestatus">Waiting for the room creator to continue...</div>`;
+    html += `</div>`;
+  }
+
+  if (state.phase === "accusation") {
+    html += `<div class="card"><div class="crisis-title">WHO WAS THE SABOTEUR?</div>
+      <div class="crisis-desc">The rescue ship is docking. Point to the traitor — get it wrong and they walk free.</div>`;
+    if (state.myAccusation === undefined || state.myAccusation === null) {
+      html += state.players.map((p, i) =>
+        state.you && i === state.you.id ? "" :
+        `<button class="optbtn" data-accuse="${i}">${esc(p.name)} <span style="color:var(--dim)">(AI: ${esc(p.ai)})</span></button>`).join("");
+      html += `<div class="votestatus">${state.accusedCount}/${state.players.length} have voted.</div>`;
+    } else {
+      html += `<button class="optbtn picked" disabled>You accused: ${esc(state.players[state.myAccusation].name)}</button>
+               <div class="votestatus">${state.accusedCount}/${state.players.length} have voted.</div>`;
+    }
+    html += `</div>`;
+  }
+
+  pane.innerHTML = html;
+  pane.querySelectorAll("[data-vote]").forEach((b) => b.addEventListener("click", () => castVote(+b.dataset.vote)));
+  pane.querySelectorAll("[data-accuse]").forEach((b) => b.addEventListener("click", () => castAccusation(+b.dataset.accuse)));
+  const next = $("btn-next");
+  if (next) next.addEventListener("click", async () => { next.disabled = true; try { await api("/api/next", withId({})); poll(); } catch (e) {} });
+}
+
+function renderChatLog(el, msgs, renderMsg, seenKey, dotId) {
+  const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+  if (el.dataset.count !== String(msgs.length)) {
+    el.innerHTML = msgs.map(renderMsg).join("");
+    el.dataset.count = String(msgs.length);
+    if (nearBottom || el.dataset.first !== "no") el.scrollTop = el.scrollHeight;
+    el.dataset.first = "no";
+  }
+  if (activePane === seenKey) seen[seenKey] = msgs.length;
+  $(dotId).classList.toggle("show", msgs.length > seen[seenKey] && activePane !== seenKey);
+}
+
+function renderAiPane() {
+  if (!state.you) return;
+  renderChatLog($("ai-log"), state.you.aiChat, (m) =>
+    m.who === "you"
+      ? `<div class="msg you"><div class="who">YOU</div>${esc(m.text)}</div>`
+      : `<div class="msg ai"><div class="who">${esc(state.you.aiName)}</div>${esc(m.text)}</div>`,
+    "ai", "dot-ai");
+  const q = state.you.questionsLeft;
+  const asking = state.phase === "playing";
+  $("ai-qleft").textContent = asking
+    ? (q > 0 ? `${q} question${q === 1 ? "" : "s"} left this round` : "No questions left this round")
+    : "Your assistant is on standby between crises.";
+  $("ai-input").disabled = $("ai-send").disabled = !asking || q <= 0 || busy;
+}
+
+function renderCrewPane() {
+  const mine = state.you ? state.you.name : "";
+  renderChatLog($("crew-log"), state.groupChat || [], (m) =>
+    m.system
+      ? `<div class="msg sys">${esc(m.text)}</div>`
+      : m.name === mine
+        ? `<div class="msg you"><div class="who">YOU</div>${esc(m.text)}</div>`
+        : `<div class="msg them"><div class="who">${esc(m.name)}</div>${esc(m.text)}</div>`,
+    "crew", "dot-crew");
+}
+
+function renderEnded() {
+  showScreen("screen-ended");
+  const r = state.reveal;
+  if (!r) return;
+  const crewWon = r.winner === "crew";
+  const v = $("end-verdict");
+  v.textContent = crewWon ? "THE CREW WINS" : "THE SABOTEUR WINS";
+  v.className = "verdict " + (crewWon ? "good" : "bad");
+  $("end-story").textContent = r.story;
+  $("end-reveal").innerHTML = r.players.map((p) => `
+    <div class="revealrow">
+      <div class="top"><span>${esc(p.name)}</span>
+        <span class="${p.role === "SABOTEUR" ? "sab" : "crewrole"}">${esc(p.role)}</span></div>
+      <div class="cond">AI ${esc(p.ai)}: ${esc(p.condition)}</div>
+    </div>`).join("");
+  $("btn-again").style.display = state.you && state.you.isHost ? "block" : "none";
+}
+
+function showRoleCard() {
+  if (!state.you) return;
+  const sab = state.you.saboteur;
+  $("role-card").innerHTML = `
+    <h2>YOUR SECRET ROLE</h2>
+    <div class="role ${sab ? "sab" : "crew"}">${sab ? "THE SABOTEUR" : "LOYAL CREW"}</div>
+    <p>${sab
+      ? "You caused the accident, and rescue means prison. Make the crew choose wrong — burn their oxygen — and never get caught. Your AI is in on it: on your private channel it will tell you the real answers and help you lie."
+      : "Keep the ship alive through five crises. Your AI assistant is your best source of information — but the crash corrupted some of the crew's AIs. Yours might be one of them. You have no way to know."}</p>
+    <p>Your assistant is <span class="ainame">${esc(state.you.aiName)}</span> — ${esc(state.you.aiPersona)}.</p>
+    <button id="role-close">Understood</button>`;
+  $("role-overlay").classList.add("show");
+  $("role-close").addEventListener("click", () => $("role-overlay").classList.remove("show"));
+}
+
+// ------------------------------------------------------------- actions
+
+function withId(extra) {
+  return Object.assign({ room: session.room, player: session.playerId }, extra);
+}
+
+async function castVote(choice) {
+  try { state = await api("/api/vote", withId({ choice })); render(); } catch (e) {}
+}
+async function castAccusation(target) {
+  try { state = await api("/api/accuse", withId({ target })); render(); } catch (e) {}
+}
+
+$("btn-create").addEventListener("click", async () => {
+  const name = $("create-name").value.trim();
+  $("home-error").textContent = "";
+  try {
+    const data = await api("/api/create", { name });
+    session = { room: data.room, playerId: data.playerId, name: data.name };
+    saveSession(); startPolling();
+  } catch (e) { $("home-error").textContent = e.message; }
+});
+
+$("btn-join").addEventListener("click", async () => {
+  const name = $("join-name").value.trim();
+  const code = $("join-code").value.trim().toUpperCase();
+  $("home-error").textContent = "";
+  try {
+    const data = await api("/api/join", { room: code, name });
+    session = { room: data.room, playerId: data.playerId, name: data.name };
+    saveSession(); startPolling();
+  } catch (e) { $("home-error").textContent = e.message; }
+});
+
+$("btn-start").addEventListener("click", async () => {
+  $("lobby-error").textContent = "";
+  try { state = await api("/api/start", withId({})); render(); }
+  catch (e) { $("lobby-error").textContent = e.message; }
+});
+
+$("btn-leave").addEventListener("click", leaveRoom);
+$("btn-home").addEventListener("click", leaveRoom);
+$("btn-role").addEventListener("click", showRoleCard);
+
+$("btn-again").addEventListener("click", async () => {
+  try { state = await api("/api/restart", withId({})); roleShownFor = null; render(); } catch (e) {}
+});
+
+$("ai-send").addEventListener("click", askAi);
+$("ai-input").addEventListener("keydown", (e) => { if (e.key === "Enter") askAi(); });
+async function askAi() {
+  const q = $("ai-input").value.trim();
+  if (!q || busy) return;
+  busy = true;
+  $("ai-input").value = "";
+  $("ai-send").disabled = true;
+  // show the question instantly while the AI thinks
+  const log = $("ai-log");
+  log.insertAdjacentHTML("beforeend",
+    `<div class="msg you"><div class="who">YOU</div>${esc(q)}</div>
+     <div class="msg ai"><div class="who">${esc(state.you.aiName)}</div><i>...thinking...</i></div>`);
+  log.scrollTop = log.scrollHeight;
+  try {
+    state = await api("/api/ask", withId({ question: q }));
+    $("ai-log").dataset.count = "-1";  // force redraw with the real reply
+    render();
+  } catch (e) {
+    $("ai-log").dataset.count = "-1";
+    poll();
+  }
+  busy = false;
+}
+
+$("crew-send").addEventListener("click", sendCrew);
+$("crew-input").addEventListener("keydown", (e) => { if (e.key === "Enter") sendCrew(); });
+async function sendCrew() {
+  const t = $("crew-input").value.trim();
+  if (!t) return;
+  $("crew-input").value = "";
+  try { state = await api("/api/chat", withId({ text: t })); render(); } catch (e) {}
+}
+
+// resume a session after refresh
+if (session) startPolling();
+</script>
+</body>
+</html>

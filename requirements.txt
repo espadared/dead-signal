@@ -1,0 +1,2 @@
+# No extra packages needed - the game uses only Python's standard library.
+# The AI assistants call the Anthropic API directly over HTTPS.

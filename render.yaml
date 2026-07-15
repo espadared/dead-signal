@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: dead-signal
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
