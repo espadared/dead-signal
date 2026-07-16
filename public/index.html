@@ -194,8 +194,9 @@
       <p><b>The story:</b> 4–6 of you are stranded on the freighter <b>Meridian</b>. Earth is silent. Five crises stand between you and rescue.</p>
       <p><b>Your AI:</b> Each player has a private AI assistant that briefs you the moment a crisis appears — and answers up to 3 follow-up questions. But the crash damaged the AI core: with 4 players, <b>one</b> assistant is corrupted; with 5–6 players, <b>two</b> are. A corrupted AI lies convincingly, and its owner has no idea.</p>
       <p><b>The traitor:</b> One PLAYER is secretly the <b>saboteur</b>. Their AI knows it, tells them the real answers, and coaches their lies.</p>
-      <p><b>Each round:</b> read the crisis and your AI's briefing, argue in the crew chat about whose AI to trust, then vote. When everyone has voted, the outcome shows and the next crisis follows automatically. Wrong choices burn oxygen — run out, and the saboteur wins.</p>
+      <p><b>Each round:</b> you have <b>90 seconds</b> to read the crisis and your AI's briefing, argue in the crew chat, and vote. When time runs out (or everyone has voted), the vote closes — so one lost phone can never freeze the game. Wrong choices burn oxygen; run out, and the saboteur wins.</p>
       <p><b>The ending:</b> survive all 5 crises and the rescue ship arrives — then everyone votes twice: who was the <b>saboteur</b>, and whose AI was <b>corrupted</b>. Name the right saboteur and the crew wins. Get it wrong, and they walk free.</p>
+      <p><b>Points</b> (they add up across games with the same crew): each loyal crew member scores <b>2</b> when the saboteur is caught, the saboteur scores <b>3</b> for escaping, and correctly spotting a corrupted AI is worth <b>1</b>. Fresh stories every game — the ship has 20 crises and never repeats one until you've seen them all.</p>
     </details>
   </div>
 </div>
@@ -409,7 +410,10 @@ function renderCrisisPane() {
 
   if (state.phase === "playing") {
     const c = state.crisis;
-    html += `<div class="card"><div class="crisis-title">⚠ ${esc(c.title)}</div>
+    const t = state.timeLeft ?? 0;
+    html += `<div class="card">
+             <div style="text-align:center;font-weight:800;font-size:15px;margin-bottom:8px;color:${t <= 15 ? "var(--bad)" : "var(--dim)"};">⏱ ${t}s to discuss and vote</div>
+             <div class="crisis-title">⚠ ${esc(c.title)}</div>
              <div class="crisis-desc">${esc(c.desc)}</div>`;
     if (state.myVote === undefined || state.myVote === null) {
       html += c.opts.map((o, i) =>
@@ -441,7 +445,10 @@ function renderCrisisPane() {
 
   if (state.phase === "accusation") {
     const locked = state.myAccusation !== undefined && state.myAccusation !== null;
-    html += `<div class="card"><div class="crisis-title">FINAL VOTE</div>
+    const t = state.timeLeft ?? 0;
+    html += `<div class="card">
+      <div style="text-align:center;font-weight:800;font-size:15px;margin-bottom:8px;color:${t <= 15 ? "var(--bad)" : "var(--dim)"};">⏱ ${t}s to lock in</div>
+      <div class="crisis-title">FINAL VOTE</div>
       <div class="crisis-desc">The rescue ship is docking. Two calls to make — get the saboteur wrong and they walk free.</div>`;
     if (!locked) {
       html += `<h2 style="color:var(--accent);font-size:14px;margin:10px 0 4px;">1. WHO IS THE SABOTEUR?</h2>`;
@@ -526,6 +533,12 @@ function renderEnded() {
     revealHtml += `<div class="revealrow"><div class="top"><span>Corrupted-AI guesses</span></div>` +
       r.guesses.map((g) =>
         `<div class="cond">${esc(g.name)} suspected ${esc(g.guess)}'s AI ${g.right ? "✓ correct!" : "✗ wrong"}</div>`).join("") +
+      `</div>`;
+  }
+  if (r.scores && r.scores.length) {
+    revealHtml += `<div class="revealrow"><div class="top"><span>SCOREBOARD — after ${r.gamesPlayed} game${r.gamesPlayed === 1 ? "" : "s"}</span></div>` +
+      r.scores.map((s2, i) =>
+        `<div class="cond">${i === 0 && s2.total > 0 ? "👑 " : ""}${esc(s2.name)}: <b style="color:var(--text)">${s2.total} pt${s2.total === 1 ? "" : "s"}</b>${s2.gained ? ` <span style="color:var(--good)">(+${s2.gained})</span>` : ""}</div>`).join("") +
       `</div>`;
   }
   $("end-reveal").innerHTML = revealHtml;

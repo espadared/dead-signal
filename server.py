@@ -221,6 +221,166 @@ CRISES = [
             2: "The splice holds for an hour — then the damaged main bus surges, blowing the pod's regulator. The crew barely gets Osei onto the batteries in time, venting a compartment of air in the scramble.",
         },
     },
+    {
+        "title": "Solar Flare Inbound",
+        "desc": "The sun just threw a tantrum: a radiation flare will wash over the ship in twenty minutes. The forecast comes from the ship's own damaged sensors.",
+        "opts": ["Shelter everyone in the shielded cargo core", "Turn the ship stern-first and hide behind the engines", "Ignore it — the sensors are probably wrong"],
+        "correct": 0,
+        "truth": "The cargo core sits inside the water tanks — the only properly shielded space aboard — and twenty minutes is enough to move everyone in.",
+        "lies": {
+            1: "the engine block is the densest mass on the ship, and pointing it at the flare shields every deck at once",
+            2: "the radiation sensors were damaged in the accident and have thrown three false alarms this week",
+        },
+        "outcomes": {
+            0: "The crew crams in between the water tanks with playing cards and ration bars. The flare washes over the hull, the counters crackle — and everyone walks out untouched.",
+            1: "The ship turns, but the flare scatters off the surrounding debris and arrives from every direction at once. The engines shield nothing, and the med bay spends the night — and a lot of air — handing out anti-radiation treatment.",
+            2: "The sensors were right. The flare hits mid-shift, the scramble for cover takes minutes too long, and the med bay burns through supplies and oxygen keeping everyone stable.",
+        },
+    },
+    {
+        "title": "Something in the Vents",
+        "desc": "A rhythmic knocking is moving through the air vents. It has been getting closer to the crew quarters for an hour.",
+        "opts": ["Flood the vents with knockout gas", "Open the vent grille and put out food", "Weld the vent section shut"],
+        "correct": 1,
+        "truth": "Thermal imaging shows one small, warm, cat-sized body moving in playful loops — matching the previous crew's missing ship cat, Biscuit.",
+        "lies": {
+            0: "knockout gas neutralises whatever it is without risking anyone's hands",
+            2: "sealing the section contains the threat permanently, with zero risk to the crew",
+        },
+        "outcomes": {
+            0: "The gas spreads through the vents — and straight into the air recyclers, which spend all night scrubbing it back out. From deep in the ducts: one offended meow. Biscuit emerges later, groggy and unforgiving.",
+            1: "Twenty minutes after the tuna pouch goes down, a dusty orange cat steps out of the vent like royalty. Biscuit, the previous crew's cat, has been aboard the whole time. Morale has never been higher.",
+            2: "The weld seals the vent — and cuts airflow to two decks, forcing a noisy bypass job that costs real air. At 03:00 a different grille pops open and a very hungry cat marches into the galley anyway.",
+        },
+    },
+    {
+        "title": "The Gravity Ring Is Shaking",
+        "desc": "The rotating ring that gives the ship its gravity has developed a shudder. The bearings are running hot, and it is getting worse by the hour.",
+        "opts": ["Slow the ring to half spin", "Stop the ring completely", "Send someone to grease the bearings at full spin"],
+        "correct": 0,
+        "truth": "At half spin the bearing load drops below the damage threshold — lighter gravity, but the ring survives to the rescue window.",
+        "lies": {
+            1: "a full stop is the only zero-risk option — bearings can't fail if they aren't turning",
+            2: "greasing at speed fixes the root cause in one pass, exactly the way the manual describes",
+        },
+        "outcomes": {
+            0: "The ring eases to half spin. Everyone walks like they're on the moon and the coffee pours strangely, but the shudder fades to a hum. It will hold.",
+            1: "The ring stops — and so does gravity. Within hours half the crew is spacesick, and the med bay's scrubbers run overtime around the clock.",
+            2: "At full spin the grease gun kicks like a mule. A bearing seizes for one heart-stopping second, the ring lurches, and loose cargo slams through two bulkheads before it stabilises.",
+        },
+    },
+    {
+        "title": "The Leaking Container",
+        "desc": "A sealed cargo container is hissing pale vapour. The manifest entry is smudged — nobody knows exactly what is inside.",
+        "opts": ["Jettison the container into space", "Top up its coolant and re-freeze it", "Crack it open and look inside"],
+        "correct": 1,
+        "truth": "The legible half of the manifest reads 'MEDICAL — CRYO'. The vapour is normal boil-off from a cryo unit running low on coolant; it just needs a top-up.",
+        "lies": {
+            0: "an unknown leaking container is a textbook jettison — no cargo is worth the ship",
+            2: "you can't fix what you can't see; a quick visual inspection is the only responsible first step",
+        },
+        "outcomes": {
+            0: "The container tumbles off into the dark — taking the ship's spare CO2 scrubber cartridges, packed in the same crate, with it. The manifest's other half turns up an hour later. Everyone feels terrible.",
+            1: "One coolant top-up later, the hissing stops. Inside: cryo-preserved medical samples, safe and sound — plus a spare crate of CO2 scrubber cartridges. Best find all week.",
+            2: "The seal cracks and the cryo unit vents its entire coolant charge in a freezing fog. The fog trips the fire system, which dumps air pressure across the whole deck.",
+        },
+    },
+    {
+        "title": "The Maintenance Drone Has Opinions",
+        "desc": "Repair drone M-7 has stopped taking orders. It is currently 'fixing' things nobody asked it to fix — including a panel that covers live wiring.",
+        "opts": ["Broadcast the manufacturer's shutdown code", "Trap it under a cargo net", "Let it keep working — it's a repair drone, after all"],
+        "correct": 0,
+        "truth": "The manual lists a hard shutdown code that works on M-series drones even when their software fails — it uses a separate legacy radio circuit.",
+        "lies": {
+            1: "the shutdown radio was damaged in the accident, so a physical capture is the only thing that can actually work",
+            2: "M-series drones have flawless safety interlocks — it literally cannot damage the ship",
+        },
+        "outcomes": {
+            0: "One code broadcast later, M-7 sets down its welding arm mid-'repair' and powers off with an almost disappointed chirp. The live wiring stays covered.",
+            1: "The net catches everything except the drone. M-7 dodges, panics, and 'repairs' the main lighting bus into darkness — and the climate system was on that bus.",
+            2: "M-7 helpfully removes the panel over the live wiring, shorts its own arm, and welds a coolant line shut. The line has to be cut and patched, venting a corridor of air.",
+        },
+    },
+    {
+        "title": "The Distress Beacon Is Drifting",
+        "desc": "The rescue beacon's antenna has drifted three degrees off Earth. Every hour off-target is an hour rescuers might be searching the wrong patch of sky.",
+        "opts": ["Suit up and realign it by hand", "Recalibrate the alignment from the bridge", "Triple the beacon's transmit power"],
+        "correct": 1,
+        "truth": "The alignment motors test fully functional — the drift is a software offset from the crash, correctable from the bridge in minutes.",
+        "lies": {
+            0: "a hands-on fix is the only way to be sure, and this particular spacewalk is a routine one",
+            2: "raw power beats precision — triple the wattage and Earth will hear you even off-axis",
+        },
+        "outcomes": {
+            0: "The 'routine' spacewalk ends with a torn glove on a bent strut. The spacewalker gets inside safely — but the airlock cycles three times in the scramble, and every cycle bleeds air.",
+            1: "Four minutes of recalibration and the antenna hums back on target. Somewhere across the void, a receiver dish is already listening.",
+            2: "At triple power the amplifier cooks itself in forty minutes. The beacon falls silent for half a day of repairs, and the power surge browns out the air recyclers twice.",
+        },
+    },
+    {
+        "title": "The Fuel Cells Are Out of Balance",
+        "desc": "Three of the ship's six fuel cells are draining faster than the others. Left alone, the imbalance will trip the whole power grid offline.",
+        "opts": ["Rebalance them by hand, cell by cell", "Run the automatic balancing program", "Shut down the three weak cells"],
+        "correct": 0,
+        "truth": "The balancing program's control board is on the accident-damage list — but manual balancing is slow, boring, and completely safe.",
+        "lies": {
+            1: "the auto-balancer does in nine seconds what takes a human an hour, with zero chance of fat-finger mistakes",
+            2: "three healthy cells beat six arguing ones — the ship runs fine at half power",
+        },
+        "outcomes": {
+            0: "Two hours of dial-watching, valve-turning tedium later, all six cells hum in agreement. Nobody enjoyed it. Everything works.",
+            1: "The damaged auto-balancer overshoots, dumps charge the wrong way, and trips the very grid it was meant to protect. The ship goes dark for twenty minutes — and the air fans with it.",
+            2: "At half power the ship limps. Life support gets priority, but the margins go razor thin, and when the galley oven trips a breaker the recyclers stutter with it.",
+        },
+    },
+    {
+        "title": "Something Is Growing on the Hull",
+        "desc": "A camera sweep found a grey, crusty patch spreading across the hull near sensor array two. It wasn't there last week.",
+        "opts": ["Scrape it off with the repair drone", "Leave it alone and monitor it", "Run current through the hull plate to burn it off"],
+        "correct": 1,
+        "truth": "The ship's xenobiology database matches it to vacuum lichen — a harmless mineral crust that feeds on starlight and cannot penetrate hull alloy.",
+        "lies": {
+            0: "any growth on the hull compromises integrity, and the drone can remove it in a single pass",
+            2: "a mild current sterilises the plate without sending anything mechanical near a sensor array",
+        },
+        "outcomes": {
+            0: "The drone's scraper slips on the crust and gouges straight through sensor array two. Half the ship's external eyes go dark, and the next debris warning comes far too late for a gentle correction.",
+            1: "The lichen keeps growing at a stately millimetre per day, doing precisely nothing. By rescue day it has formed a shape the crew unanimously agrees looks like a duck. The duck is named Admiral.",
+            2: "The current arcs through the damaged grid and cooks a junction box two decks in. The lichen is fine. The climate-control circuits are not.",
+        },
+    },
+    {
+        "title": "Nobody Has Slept in Two Days",
+        "desc": "Since the accident, the crew has been running on adrenaline and terrible coffee. People are seeing movement in empty corridors. Mistakes are starting.",
+        "opts": ["Enforce sleep shifts, half the crew at a time", "Double the stimulant ration and push through", "Let everyone crash at once — the ship can mind itself"],
+        "correct": 0,
+        "truth": "Half-crew rotation keeps every critical station manned while everyone gets six real hours — standard emergency doctrine, and the math checks out.",
+        "lies": {
+            1: "the stim locker holds a week of supply, and rescue is closer than burnout",
+            2: "the automation held the ship together during the accident itself — one quiet night is nothing",
+        },
+        "outcomes": {
+            0: "The first sleep shift stumbles to their bunks mid-argument about who goes first. Twelve hours later the ship is crewed by functional humans again, and the corridor ghosts evaporate.",
+            1: "By hour sixty, a very confident engineer reroutes power into a dead circuit and blows a junction box. The repairs cost more air than sleep ever would have.",
+            2: "Everyone sleeps. Nobody hears the low-pressure alarm in hydroponics for four hours. The plants survive; the air margin doesn't.",
+        },
+    },
+    {
+        "title": "The Computer Is Counting Down",
+        "desc": "A ten-minute countdown has appeared on every screen on the ship. It is not labelled. The computer declines to explain.",
+        "opts": ["Cut power to the countdown subsystem", "Let it run and see what happens", "Enter the captain's emergency override code"],
+        "correct": 1,
+        "truth": "The maintenance log shows the same countdown every thirty days: it's the scheduled dust-filter purge — noisy, dramatic, and completely harmless.",
+        "lies": {
+            0: "an unexplained countdown on a damaged ship is a bomb until proven otherwise — kill it at the source",
+            2: "the override code halts every automated process safely; that is exactly what it exists for",
+        },
+        "outcomes": {
+            0: "Cutting the subsystem's power also cuts the filter fans it controls. The purge never runs, the clogged filters wheeze for days, and air quality sinks until someone finally reads the manual.",
+            1: "At zero, every air duct on the ship sneezes at once, blasting a month of dust into the filters with a sound like a giant clearing its throat. The countdown resets to thirty days. The crew's heart rates do not.",
+            2: "The override halts the countdown — and every other scheduled process, including the CO2 scrub cycles. It takes a tense evening of manual restarts to get the ship breathing right again.",
+        },
+    },
 ]
 
 # ------------------------------------------------------- AI assistant flavour
@@ -235,6 +395,13 @@ AI_NAMES = ["HALCYON", "JUNO", "ORACLE", "SPARK", "MOTHER", "TINTIN", "VECTOR", 
 # 4 players -> 1 corrupted AI among the crew; 5-6 players -> 2 corrupted.
 
 RESULT_SECONDS = 15  # how long the round outcome stays up before auto-advancing
+ROUND_SECONDS = 90   # discuss-and-vote time per crisis; then the vote closes
+ACCUSE_SECONDS = 90  # time for the final vote
+
+# Points, tallied across games played by the same crew:
+POINTS_CREW_WIN = 2      # each loyal crew member when the saboteur is caught
+POINTS_SABOTEUR_WIN = 3  # the saboteur, for escaping
+POINTS_SPOT_CORRUPTED = 1  # correctly guessing whose AI was corrupted
 
 
 def get_lan_ip():
@@ -279,8 +446,12 @@ def new_room(host_name):
         "crisis_order": [],        # indexes into CRISES for this game
         "votes": {},               # player idx -> option idx (current round)
         "result_ts": 0.0,          # when the current result was revealed
+        "deadline": 0.0,           # when the current vote closes (playing/accusation)
         "accusations": {},         # player idx -> accused player idx (saboteur pick)
         "corrupted_guesses": {},   # player idx -> player idx (corrupted-AI pick)
+        "scores": {},              # player name -> points across games
+        "games_played": 0,
+        "used_crises": set(),      # crisis indexes already played by this crew
         "group_chat": [],          # {name, text, system}
         "result": None,            # set during the result phase
         "reveal": None,            # set when the game ends
@@ -302,6 +473,7 @@ def add_player(room, name):
         "ai_chat": [],             # {who: "you"|"ai", text}
         "questions_left": QUESTIONS_PER_ROUND,
     })
+    room["scores"].setdefault(name, 0)
     return len(room["players"]) - 1
 
 
@@ -327,7 +499,14 @@ def start_game(room):
         p["ai_chat"] = []
         p["questions_left"] = QUESTIONS_PER_ROUND
     room["oxygen"] = START_OXYGEN
-    room["crisis_order"] = random.sample(range(len(CRISES)), TOTAL_ROUNDS)
+    # Never repeat a crisis with this crew until the whole bank is used up,
+    # so back-to-back games get fresh stories.
+    remaining = [i for i in range(len(CRISES)) if i not in room["used_crises"]]
+    if len(remaining) < TOTAL_ROUNDS:
+        room["used_crises"] = set()
+        remaining = list(range(len(CRISES)))
+    room["crisis_order"] = random.sample(remaining, TOTAL_ROUNDS)
+    room["used_crises"].update(room["crisis_order"])
     room["round"] = 1
     room["votes"] = {}
     room["accusations"] = {}
@@ -337,6 +516,7 @@ def start_game(room):
     room["reveal"] = None
     room["corrupt_picks"] = {}
     room["phase"] = "playing"
+    room["deadline"] = time.time() + ROUND_SECONDS
     system_msg(room, "Distress beacon launched. No reply from Earth. Five system crises stand between the crew and the rescue window.")
     system_msg(room, f"CRISIS 1 of {TOTAL_ROUNDS}: {current_crisis(room)['title']}")
     send_briefings(room)
@@ -384,13 +564,17 @@ def send_briefings(room):
 
 
 def resolve_votes(room):
-    """Everyone has voted: apply the outcome and move to the result phase."""
+    """The vote closed (everyone voted, or time ran out): apply the outcome."""
     crisis = current_crisis(room)
     tally = {}
     for choice in room["votes"].values():
         tally[choice] = tally.get(choice, 0) + 1
-    top = max(tally.values())
-    leaders = [c for c, v in tally.items() if v == top]
+    if tally:
+        top = max(tally.values())
+        leaders = [c for c, v in tally.items() if v == top]
+    else:
+        # nobody voted at all - the ship's computer picks blind
+        leaders = list(range(len(crisis["opts"])))
     hesitated = len(leaders) > 1
     chosen = random.choice(leaders)
     correct = chosen == crisis["correct"]
@@ -426,6 +610,7 @@ def next_round(room):
         room["phase"] = "accusation"
         room["accusations"] = {}
         room["corrupted_guesses"] = {}
+        room["deadline"] = time.time() + ACCUSE_SECONDS
         system_msg(room, "RESCUE SHIP INBOUND. Before the docking clamps engage: who was the saboteur — and whose AI was corrupted? Vote now. Name the wrong saboteur, and they walk free.")
         return
     room["round"] += 1
@@ -434,23 +619,37 @@ def next_round(room):
     for p in room["players"]:
         p["questions_left"] = QUESTIONS_PER_ROUND
     room["phase"] = "playing"
+    room["deadline"] = time.time() + ROUND_SECONDS
     system_msg(room, f"CRISIS {room['round']} of {TOTAL_ROUNDS}: {current_crisis(room)['title']}")
     send_briefings(room)
 
 
 def maybe_advance(room):
-    """Auto-advance from the result screen once everyone has had time to read it."""
-    if room["phase"] == "result" and time.time() - room["result_ts"] >= RESULT_SECONDS:
+    """Move the game along on its own: close expired votes, advance results.
+    Runs on every state poll, so a player who vanished can never freeze the game."""
+    now = time.time()
+    if room["phase"] == "result" and now - room["result_ts"] >= RESULT_SECONDS:
         next_round(room)
+    elif room["phase"] == "playing" and now > room["deadline"]:
+        missing = len(room["players"]) - len(room["votes"])
+        if missing:
+            system_msg(room, f"Time's up — voting closed without {missing} vote{'s' if missing > 1 else ''}.")
+        resolve_votes(room)
+    elif room["phase"] == "accusation" and now > room["deadline"]:
+        resolve_accusations(room)
 
 
 def resolve_accusations(room):
     tally = {}
     for target in room["accusations"].values():
         tally[target] = tally.get(target, 0) + 1
+    saboteur = next(i for i, p in enumerate(room["players"]) if p["saboteur"])
+    if not tally:
+        end_game(room, winner="saboteur",
+                 story=f"The clock ran out and nobody pointed a finger. {room['players'][saboteur]['name']} boards the rescue ship smiling, sabotage kit tucked under one arm.")
+        return
     top = max(tally.values())
     leaders = [t for t, v in tally.items() if v == top]
-    saboteur = next(i for i, p in enumerate(room["players"]) if p["saboteur"])
     caught = leaders == [saboteur]
     if caught:
         end_game(room, winner="crew",
@@ -469,21 +668,44 @@ def end_game(room, winner, story):
     }
     players = room["players"]
     saboteur = next(i for i, p in enumerate(players) if p["saboteur"])
+    guesses = [
+        {
+            "name": players[pidx]["name"],
+            "guess": players[gidx]["name"],
+            "right": players[gidx]["condition"] == "corrupted",
+        }
+        for pidx, gidx in sorted(room["corrupted_guesses"].items())
+    ]
+
+    # points for this game, added to the crew's running scoreboard
+    gains = {p["name"]: 0 for p in players}
+    if winner == "crew":
+        for p in players:
+            if not p["saboteur"]:
+                gains[p["name"]] += POINTS_CREW_WIN
+    else:
+        gains[players[saboteur]["name"]] += POINTS_SABOTEUR_WIN
+    for g in guesses:
+        if g["right"]:
+            gains[g["name"]] += POINTS_SPOT_CORRUPTED
+    for name, pts in gains.items():
+        room["scores"][name] = room["scores"].get(name, 0) + pts
+    room["games_played"] += 1
+
     room["reveal"] = {
         "winner": winner,
         "story": story,
         "saboteur": players[saboteur]["name"],
         "corrupted": [p["name"] for p in players if p["condition"] == "corrupted"],
-        "guesses": [
-            {
-                "name": players[pidx]["name"],
-                "guess": players[gidx]["name"],
-                "right": players[gidx]["condition"] == "corrupted",
-            }
-            for pidx, gidx in sorted(room["corrupted_guesses"].items())
-        ],
+        "guesses": guesses,
         "oxygen": room["oxygen"],
         "roundsSurvived": room["round"] if room["phase"] != "accusation" else TOTAL_ROUNDS,
+        "gamesPlayed": room["games_played"],
+        "scores": sorted(
+            [{"name": n, "gained": gains.get(n, 0), "total": t}
+             for n, t in room["scores"].items()],
+            key=lambda x: -x["total"],
+        ),
         "players": [
             {
                 "name": p["name"],
@@ -656,6 +878,7 @@ def state_for(room, pidx):
         crisis = current_crisis(room)
         payload["crisis"] = {"title": crisis["title"], "desc": crisis["desc"], "opts": crisis["opts"]}
         payload["votedCount"] = len(room["votes"])
+        payload["timeLeft"] = max(0, int(room["deadline"] - time.time()))
         if me is not None:
             payload["myVote"] = room["votes"].get(pidx)
     if room["phase"] == "result":
@@ -663,6 +886,7 @@ def state_for(room, pidx):
         payload["nextIn"] = max(0, int(RESULT_SECONDS - (time.time() - room["result_ts"])) + 1)
     if room["phase"] == "accusation":
         payload["accusedCount"] = len(room["accusations"])
+        payload["timeLeft"] = max(0, int(room["deadline"] - time.time()))
         if me is not None:
             payload["myAccusation"] = room["accusations"].get(pidx)
             payload["myCorruptedGuess"] = room["corrupted_guesses"].get(pidx)
