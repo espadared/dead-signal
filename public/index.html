@@ -27,6 +27,9 @@
   }
   .screen { display: none; max-width: 520px; margin: 0 auto; padding: 16px; min-height: 100dvh; }
   .screen.active { display: flex; flex-direction: column; }
+  /* The game screen is locked to the viewport so the chat logs scroll
+     inside their own boxes and the input stays visible at the bottom. */
+  #screen-game.active { height: 100dvh; overflow: hidden; }
 
   h1.logo {
     font-size: 40px; letter-spacing: 6px; text-align: center; margin: 40px 0 4px;
