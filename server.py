@@ -46,7 +46,7 @@ MAX_PLAYERS = 6
 TOTAL_ROUNDS = 5
 QUESTIONS_PER_ROUND = 3
 START_OXYGEN = 100
-WRONG_COST = 35
+WRONG_COST = 25   # oxygen lost per wrong call; the crew survives 3 mistakes, dies on the 4th
 RIGHT_BONUS = 5
 
 ROOM_TTL_SECONDS = 24 * 60 * 60
